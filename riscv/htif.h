@@ -16,7 +16,8 @@ struct packet;
 class htif_isasim_t : public htif_pthread_t
 {
 public:
-  htif_isasim_t(sim_t* _sim, const std::vector<std::string>& args);
+  htif_isasim_t(sim_t* _sim, const std::vector<std::string>& args,
+    int _host_in, int _host_out);
   void tick();
   bool done();
 

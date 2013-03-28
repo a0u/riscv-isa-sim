@@ -18,6 +18,7 @@ static void help()
     "\t-p <n>             Simulate <n> processors\n"
     "\t-m <n>             Provide <n> MB of target memory\n"
     "\t-d                 Interactive debug mode\n"
+    "\t-t                 Allocate a pseudo-tty for HTIF\n"
     "\t--ic=<S>:<W>:<B>   Instantiate a cache model with S sets,\n"
     "\t--dc=<S>:<W>:<B>     W ways, and B-byte blocks (with S and\n"
     "\t--l2=<S>:<W>:<B>     B both powers of 2).\n",
@@ -29,6 +30,7 @@ int main(int argc, char** argv)
 {
   
   bool debug = false;
+  bool host_pty = false;
   unsigned long nprocs = 1;
   size_t mem_mb = 0;
   std::unique_ptr<icache_sim_t> ic;
@@ -45,7 +47,7 @@ int main(int argc, char** argv)
     int long_optind;
     int c;
 
-    c = getopt_long(argc, argv, "p:m:d", long_opts, &long_optind);
+    c = getopt_long(argc, argv, "p:m:dt", long_opts, &long_optind);
     if (c == -1)
       break;
 
@@ -71,6 +73,9 @@ int main(int argc, char** argv)
         break;
       case 'd':
         debug = true;
+        /* fall-through */
+      case 't':
+        host_pty = true;
         break;
       default:
         help();
@@ -83,7 +88,7 @@ int main(int argc, char** argv)
 
   const char* const* c_argv = argv;
   std::vector<std::string> htif_args(c_argv + optind, c_argv + argc);
-  sim_t s(nprocs, mem_mb, htif_args);
+  sim_t s(nprocs, mem_mb, htif_args, host_pty);
 
   if (ic && l2) ic->set_miss_handler(&*l2);
   if (dc && l2) dc->set_miss_handler(&*l2);
@@ -94,5 +99,5 @@ int main(int argc, char** argv)
   }
 
   s.run(debug);
-  return EXIT_SUCCESS;
+  return (EXIT_SUCCESS);
 }

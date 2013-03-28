@@ -8,14 +8,15 @@
 #include <climits>
 #include <assert.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <poll.h>
 
 #ifdef __linux__
 # define mmap mmap64
 #endif
 
-sim_t::sim_t(int _nprocs, int mem_mb, const std::vector<std::string>& args)
-  : htif(new htif_isasim_t(this, args)),
-    procs(_nprocs)
+sim_t::sim_t(int _nprocs, int mem_mb, const std::vector<std::string>& args, bool host_pty)
+  : procs(_nprocs)
 {
   // allocate target machine's memory, shrinking it as necessary
   // until the allocation succeeds
@@ -42,6 +43,41 @@ sim_t::sim_t(int _nprocs, int mem_mb, const std::vector<std::string>& args)
 
   for(size_t i = 0; i < num_cores(); i++)
     procs[i] = new processor_t(this, new mmu_t(mem, memsz), i);
+
+  int host_in = STDIN_FILENO;
+  int host_out = STDOUT_FILENO;
+
+  if (host_pty) {
+    int pty = posix_openpt(O_RDWR | O_NOCTTY);
+    if (pty < 0 || (grantpt(pty) != 0) || (unlockpt(pty) != 0)) {
+      perror("failed to allocate pty");
+    } else {
+      host_in = host_out = pty;
+
+      /* Induce a HUP condition */
+      char *pts = ptsname(pty);
+      int fd = open(pts, O_RDWR | O_NOCTTY);
+      close(fd);
+
+      fprintf(stderr, "pty allocated: %s\n", pts);
+      /* Poll until HUP condition vanishes, which should
+         indicate that the slave device has been (re)opened */
+      for (;;)
+      {
+        struct pollfd fds;
+        fds.fd = pty;
+        fds.events = POLLHUP;
+        if (poll(&fds, 1, 0) < 0) {
+          perror("poll");
+          break;
+        }
+        if (!(fds.revents & POLLHUP))
+          break;
+        usleep(100);
+      }
+    }
+  }
+  htif = new htif_isasim_t(this, args, host_in, host_out);
 }
 
 sim_t::~sim_t()

@@ -14,7 +14,7 @@ class htif_isasim_t;
 class sim_t
 {
 public:
-  sim_t(int _nprocs, int mem_mb, const std::vector<std::string>& htif_args);
+  sim_t(int _nprocs, int mem_mb, const std::vector<std::string>& htif_args, bool host_pty);
   ~sim_t();
 
   // run the simulation to completion

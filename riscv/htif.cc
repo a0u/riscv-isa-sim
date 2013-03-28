@@ -8,10 +8,10 @@
 #include <errno.h>
 #include <assert.h>
 #include <stddef.h>
-#include <poll.h>
 
-htif_isasim_t::htif_isasim_t(sim_t* _sim, const std::vector<std::string>& args)
-  : htif_pthread_t(args), sim(_sim), reset(true), seqno(1)
+htif_isasim_t::htif_isasim_t(sim_t* _sim, const std::vector<std::string>& args,
+  int _host_in, int _host_out)
+  : htif_pthread_t(args, _host_in, _host_out), sim(_sim), reset(true), seqno(1)
 {
 }
 
